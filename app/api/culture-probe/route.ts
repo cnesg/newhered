@@ -27,12 +27,17 @@ export async function GET() {
       d.getDate()
     ).padStart(2, "0")}`;
 
-  // 알려진 두 가지 엔드포인트 형태를 모두 시도해 실제로 살아있는 쪽을 찾는다.
+  // 알려진 후보 엔드포인트들을 모두 시도해 실제로 살아있는 쪽과
+  // 정확한 응답 구조를 찾는다. 이전 시도(apis.data.go.kr, www.culture.go.kr)는
+  // 둘 다 폐기된 구주소였다 — culture.go.kr 계열 API는 2023년경
+  // kcisa.kr(한국문화정보원) 도메인으로 이전되었다.
   const candidates = [
+    // 신주소 후보: 한눈에보는문화정보조회서비스는 meta16 그룹 아래
+    // 여러 operation으로 나뉘어 있는 것으로 보인다.
+    `https://api.kcisa.kr/openapi/service/rest/meta16/getkopis01?serviceKey=${key}&numOfRows=10&pageNo=1`,
+    `http://api.kcisa.kr/openapi/service/rest/meta16/getkopis01?serviceKey=${key}&numOfRows=10&pageNo=1`,
+    // 구주소 후보 (참고용으로 계속 시도 — 살아있을 가능성은 낮음)
     `https://apis.data.go.kr/B553457/nopenapi/rest/publicperformancedisplays/period?serviceKey=${key}&from=${fmt(
-      from
-    )}&to=${fmt(to)}&cPage=1&rows=10&realmCode=D`,
-    `https://www.culture.go.kr/openapi/rest/publicperformancedisplays/period?serviceKey=${key}&from=${fmt(
       from
     )}&to=${fmt(to)}&cPage=1&rows=10&realmCode=D`,
   ];
@@ -46,7 +51,7 @@ export async function GET() {
         url: url.replace(key, "***"),
         status: res.status,
         contentType: res.headers.get("content-type"),
-        bodyPreview: text.slice(0, 2000),
+        bodyPreview: text.slice(0, 3000),
       });
     } catch (e) {
       results.push({
