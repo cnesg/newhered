@@ -206,6 +206,20 @@ artist_daily_scores   매일 배치가 signals를 집계해 남기는 스냅샷.
 병행하는 단계다. 다음 작업은 이 키로 전시 목록을 가져와 `exhibitions`와
 `exhibition_artists`에 채워 넣는 배치 라우트다.
 
+## 보안 업데이트 이력
+
+**2026-08-14** — Next.js에서 CVSS 10.0짜리 심각한 원격코드실행 취약점(CVE-2025-66478,
+React Server Components 관련)이 발견되어 15.5.23으로 올렸다. React도 19.1.7로 맞췄다.
+이 사이에 12월·5월 두 차례 추가 보안 릴리스가 더 있었고, 이번에 전부 반영했다.
+
+`npm audit`에 남는 항목(`sharp`, Next.js 16 요구)은 이미지 최적화 API 내부 의존성 문제다.
+이 프로젝트는 `next/image`를 쓰지 않고 일반 `<img>` 태그만 쓰므로 그 코드 경로가
+실행되지 않는다. Next 16으로의 이전은 breaking change라 지금 단계에서는 보류했다.
+
+**앞으로 배포할 때마다** `npm install` 결과에 `deprecated` 경고나 `npm audit`에 high 이상이
+뜨면 먼저 처리하고 배포한다. Next.js는 보안 릴리스를 사전 공지 없이 내놓기 때문에,
+분기에 한 번 정도는 `npm outdated`로 확인하는 습관을 들이는 게 좋다.
+
 ## 구조
 
 ```
