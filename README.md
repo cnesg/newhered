@@ -194,17 +194,61 @@ artist_daily_scores   매일 배치가 signals를 집계해 남기는 스냅샷.
 "이 시점에 이 작가에게 이런 일이 있었다"는 같은 모양이다. 축마다 테이블을 나누면
 축이 하나 늘 때마다 스키마와 쿼리를 다시 짜야 한다.
 
-## 문화포털 API (전시 데이터 수집)
+## 방향 전환: 전시 이력 → 언급 트렌드
 
-공공데이터포털(data.go.kr)에서 "한눈에보는문화정보조회서비스" 또는
-"문화체육관광부_문화예술공연(통합)"을 검색해 활용신청한다. 개발계정은 보통 즉시~몇 시간 내
-자동 승인된다.
+처음엔 전시 이력(제도점수)으로 작가 티어를 계산하려 했다. 공공API 인증에서 계속
+막히기도 했고, 더 근본적으로는 이게 원래 목표와 어긋났다 — 원했던 건 "전시 관리"가
+아니라 "언급이 늘고 있는 작가·작품을 보는 트렌드 화면"이었다.
 
-발급받은 서비스키를 Vercel에 `CULTURE_API_KEY`로 등록한다.
+그래서 방향을 바꿨다. **뉴스·영상에서 작가 이름이 언급된 빈도**를 세는 쪽으로.
 
-**아직 수집 코드는 붙어 있지 않다.** 승인 대기 중이거나 Supabase 스키마 작업과
-병행하는 단계다. 다음 작업은 이 키로 전시 목록을 가져와 `exhibitions`와
-`exhibition_artists`에 채워 넣는 배치 라우트다.
+- `venues`/`exhibitions` 테이블과 `/admin/exhibitions` 화면은 스키마와 코드에 남아있지만
+  현재 파이프라인에서 쓰지 않는다. 나중에 필요해지면 다시 쓸 수 있어 지우지 않았다.
+- `lib/culture.ts`(공공API 수집 코드)도 마찬가지로 미사용 상태로 남겨둔다.
+
+## 언급 추출 (Claude 기반)
+
+이름이 사람 이름인지, 그중에서도 미술 작가인지 판별하는 건 정규식이나 고정 목록으로는
+정확도가 낮다. 그래서 매일 수집된 뉴스·영상 텍스트를 Claude API로 보내 작가 이름만
+뽑아낸다. 큐레이터·갤러리스트·컬렉터는 제외하도록 프롬프트에 명시했다.
+
+### 설정
+
+console.anthropic.com에서 API 키를 발급받아 Vercel에 `ANTHROPIC_API_KEY`로 등록한다.
+하루 한 번, 텍스트 100여 건을 처리하는 정도라 비용은 미미하다(`claude-haiku-4-5` 사용).
+
+### 동작 방식
+
+`/api/refresh`가 매일 07:00 KST에 다음을 수행한다.
+
+1. 뉴스·영상 캐시 갱신 (기존과 동일)
+2. 오늘 수집된 뉴스 제목+요약, 영상 제목을 모아 Claude에 전달
+3. 추출된 작가 이름을 `artists` 테이블에 upsert (이미 있으면 재사용)
+4. 각 언급을 `signals` 테이블에 기록 — 뉴스는 `axis: discourse`, 영상은 `axis: attention`
+
+추출이 실패해도(키 미설정, API 오류) 뉴스·영상 갱신 자체는 항상 성공한다 — 두 기능이
+분리되어 있다.
+
+### 트렌딩 확인
+
+`/api/trending`에서 최근 7일 언급량과 그 전주 대비 증가율을 볼 수 있다.
+데이터가 아직 없으면 빈 배열이 정상이다 — 크론이 하루 이상 돌아야 뭔가 쌓인다.
+
+```json
+{
+  "trending": [
+    { "nameKo": "김민정", "mentionsThisWeek": 4, "mentionsLastWeek": 1, "growth": 3 }
+  ]
+}
+```
+
+### 아직 안 된 것
+
+이 데이터를 홈 화면(3티어 카드)에 실제로 연결하는 작업은 아직이다. 지금은
+`lib/data.ts`의 목업 데이터가 그대로 화면에 나온다. 며칠 데이터가 쌓여 결과가 그럴듯해
+보이면, 그때 `/api/trending`을 홈 화면에 연결하고 티어 구분 기준도 다시 정한다
+(전시 이력 없이 순수 언급량만으로는 ESTABLISHED/RISING/ROOKIE 구분을 어떻게 할지
+다시 생각해야 한다).
 
 ## 보안 업데이트 이력
 
@@ -236,6 +280,9 @@ lib/
   edition.ts      오전 7시 기준 판 계산
   youtube.ts      YouTube 채널·검색 수집
   supabase.ts     Supabase 클라이언트 (anon/service 분리)
+  culture.ts      (미사용) 문화포털 API 수집 코드
+  extract.ts      Claude로 텍스트에서 작가 이름 추출
+  mentions.ts     뉴스·영상 수집 → 추출 → signals 저장 파이프라인
 app/api/news/
   route.ts        /api/news?scope=kr|intl
 app/api/videos/
@@ -244,6 +291,12 @@ app/api/refresh/
   route.ts        크론이 호출하는 캐시 갱신 엔드포인트
 app/api/status/
   route.ts        환경변수·Supabase 연결 진단
+app/api/trending/
+  route.ts        최근 7일 언급량 기준 트렌딩 조회
+app/api/admin/exhibitions/
+  route.ts        (미사용) 관리자 전시 저장 엔드포인트
+app/admin/exhibitions/
+  page.tsx        (미사용) 전시 수동 입력 폼
 supabase/
   schema.sql      테이블 정의
   seed_venues.sql 기관 가중치 초기값
@@ -268,7 +321,9 @@ public/
 - [x] YouTube Data API 연결
 - [ ] 문화포털 API로 전시 데이터 연결
 - [x] Supabase 스키마 설계
-- [ ] 문화포털 API로 전시 데이터 수집 배치
-- [ ] 제도 점수 산출 로직 (기관 가중치 × 최근성)
+- [x] 언급 추출 파이프라인 (Claude 기반)
+- [ ] `/api/trending`을 홈 화면에 연결
+- [ ] 순수 언급량 기반 티어 구분 기준 재설계
+- [ ] 경매사이트(케이옥션·서울옥션) 언급 소스 추가
 - [ ] 작가 상세 페이지
 - [ ] 푸시 알림 (관심 작가 신규 전시 알림)

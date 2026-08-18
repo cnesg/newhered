@@ -757,3 +757,134 @@ img.videoThumb {
   margin-top: 6px;
   color: var(--ink-60);
 }
+
+/* ---------- admin ---------- */
+
+.adminShell {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+.adminTitle {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 6px;
+}
+
+.adminNote {
+  font-size: 13px;
+  color: var(--ink-60);
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+.adminSubtitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 36px 0 12px;
+}
+
+.adminForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.adminGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.adminField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-60);
+}
+
+.adminField input,
+.adminField select {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+}
+
+.adminField input:focus,
+.adminField select:focus {
+  outline: 2px solid var(--signal);
+  outline-offset: -1px;
+}
+
+.adminSubmit {
+  margin-top: 4px;
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 13px;
+  font-weight: 500;
+  align-self: flex-start;
+}
+
+.adminSubmit:disabled {
+  opacity: 0.5;
+}
+
+.adminOk {
+  font-size: 12px;
+  color: var(--signal);
+  margin: 0;
+}
+
+.adminError {
+  font-size: 12px;
+  color: #b3435c;
+  margin: 0;
+}
+
+.adminRecent {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.adminRecent li {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.adminRecent li:first-child {
+  border-top: none;
+}
+
+.adminRecent strong {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.adminRecent span {
+  font-size: 12px;
+  color: var(--ink-40);
+}
+
+.adminEmpty {
+  color: var(--ink-40);
+}
+
+@media (max-width: 480px) {
+  .adminGrid {
+    grid-template-columns: 1fr;
+  }
+}
