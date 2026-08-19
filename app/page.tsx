@@ -1,18 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { DATA, Scope } from "@/lib/data";
 import NewsList from "@/components/NewsList";
 import VideoGrid from "@/components/VideoGrid";
 import TierBoard from "@/components/TierBoard";
 import { editionLabel } from "@/lib/edition";
 
-const NAV = ["트렌드", "작가", "전시", "시장", "캘린더"];
+const SOON_TABS = ["작가", "전시", "시장", "캘린더"];
 
 export default function Home() {
   const [scope, setScope] = useState<Scope>("kr");
-  const [region, setRegion] = useState("전체");
-  const [tab, setTab] = useState("트렌드");
   const [edition, setEdition] = useState("");
 
   useEffect(() => {
@@ -23,7 +22,6 @@ export default function Home() {
 
   function switchScope(next: Scope) {
     setScope(next);
-    setRegion("전체");
   }
 
   return (
@@ -34,16 +32,15 @@ export default function Home() {
             ART<em>rend</em>
           </span>
           <nav className="nav" aria-label="주요 메뉴">
-            {NAV.map((n) => (
-              <button
-                key={n}
-                type="button"
-                className={tab === n ? "active" : undefined}
-                aria-current={tab === n ? "page" : undefined}
-                onClick={() => setTab(n)}
-              >
+            <span className="navActive" aria-current="page">
+              트렌드
+            </span>
+            <Link href="/sources">소스</Link>
+            {SOON_TABS.map((n) => (
+              <span key={n} className="navSoon" title="준비 중입니다">
                 {n}
-              </button>
+                <span className="navSoonBadge">준비중</span>
+              </span>
             ))}
           </nav>
           <div className="scope" role="group" aria-label="지역 범위">
@@ -66,21 +63,6 @@ export default function Home() {
       </header>
 
       <main className="shell">
-        <div className="chipRow" role="group" aria-label="세부 지역">
-          <span className="chipLabel">지역</span>
-          {d.regions.map((r) => (
-            <button
-              key={r}
-              type="button"
-              className="chip"
-              aria-pressed={region === r}
-              onClick={() => setRegion(r)}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-
         {edition && (
           <p className="edition">
             <span className="editionDot" aria-hidden="true" />

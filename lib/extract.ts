@@ -17,6 +17,14 @@ export type ExtractedMention = {
   itemId: string;
   nameKo: string | null;
   nameEn: string | null;
+  /**
+   * "established": 이미 미술사에 기록되었거나, 국립현대미술관·MoMA·Tate 같은
+   * 주요 기관에 소장/개인전 이력이 있거나, 경매에서 꾸준히 고가에 낙찰되는 등
+   * 명성이 이미 확고한 경우. 확실하지 않으면 반드시 "unknown".
+   * 이 값은 "우리가 이 이름을 오늘 처음 봤는지"와는 무관하다 — 시스템이
+   * 방금 가동을 시작했다는 이유로 유명 작가가 신진으로 오분류되는 걸 막기 위함.
+   */
+  fame: "established" | "unknown";
 };
 
 const MODEL = "claude-haiku-4-5-20251001";
@@ -39,9 +47,17 @@ function buildPrompt(items: MentionSource[]): string {
 이름은 본문에 쓰인 그대로의 한국어 이름(nameKo)을 우선하고, 알 수 있다면 영문 표기도
 nameEn에 같이 써라. 모르면 null로 둔다.
 
+추가로 각 작가마다 "fame"을 판단해라. 아래 기준을 엄격히 적용한다:
+- "established": 이미 미술사에 기록되었거나(예: 단색화 1세대, 국립현대미술관 회고전
+  이력, 주요 국제 비엔날레 대표 참가 이력 등), 국내외 최상위 기관에 영구 소장되어
+  있거나, 경매에서 지속적으로 고가에 낙찰되는 등 명성이 이미 학계·시장에서 확고한
+  경우만 해당한다.
+- "unknown": 위에 해당하지 않거나, 확실히 판단할 근거가 없는 모든 경우. 애매하면
+  반드시 이쪽을 선택한다 — 과잉 판정보다 누락이 안전하다.
+
 반드시 아래 JSON 형식으로만 답하라. 다른 설명이나 코드블록 표시 없이 JSON만 출력한다.
 
-{"mentions": [{"itemIndex": 0, "nameKo": "김민정", "nameEn": "Kim Minjung"}, ...]}
+{"mentions": [{"itemIndex": 0, "nameKo": "김민정", "nameEn": "Kim Minjung", "fame": "unknown"}, ...]}
 
 --- 목록 ---
 ${lines}`;
@@ -79,7 +95,14 @@ export async function extractArtistMentions(
   const text: string = json?.content?.find((c: any) => c.type === "text")?.text ?? "";
   const cleaned = text.replace(/```json|```/g, "").trim();
 
-  let parsed: { mentions?: { itemIndex: number; nameKo: string | null; nameEn: string | null }[] };
+  let parsed: {
+    mentions?: {
+      itemIndex: number;
+      nameKo: string | null;
+      nameEn: string | null;
+      fame?: "established" | "unknown";
+    }[];
+  };
   try {
     parsed = JSON.parse(cleaned);
   } catch {
@@ -90,7 +113,12 @@ export async function extractArtistMentions(
   for (const m of parsed.mentions ?? []) {
     const item = capped[m.itemIndex];
     if (!item || !m.nameKo?.trim()) continue;
-    out.push({ itemId: item.id, nameKo: m.nameKo.trim(), nameEn: m.nameEn?.trim() || null });
+    out.push({
+      itemId: item.id,
+      nameKo: m.nameKo.trim(),
+      nameEn: m.nameEn?.trim() || null,
+      fame: m.fame === "established" ? "established" : "unknown",
+    });
   }
   return out;
 }

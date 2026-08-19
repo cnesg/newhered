@@ -81,9 +81,18 @@ export async function runMentionExtraction(): Promise<{
       if (existing) {
         artistId = existing.id as string;
       } else {
+        // 신규 작가일 때만 fame 판단을 반영한다. 이미 명성이 확립된 경우
+        // ESTABLISHED로 즉시 고정(tier_locked)해, "우리가 오늘 처음 봤다"는
+        // 이유만으로 거장이 ROOKIE로 분류되는 걸 막는다.
+        const isKnown = m.fame === "established";
         const { data: created, error } = await db
           .from("artists")
-          .insert({ name_ko: nameKo, name_en: m.nameEn })
+          .insert({
+            name_ko: nameKo,
+            name_en: m.nameEn,
+            tier: isKnown ? "established" : "unrated",
+            tier_locked: isKnown,
+          })
           .select("id")
           .single();
         if (error || !created) continue;

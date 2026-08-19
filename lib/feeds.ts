@@ -43,6 +43,9 @@ export const FEEDS: Feed[] = [
   { source: "Elephant", url: "https://elephant.art/feed/", scope: "intl", filter: false },
   { source: "ArtAsiaPacific", url: "https://artasiapacific.com/feed/", scope: "intl", filter: false },
   { source: "Artsy", url: "https://www.artsy.net/rss/news", scope: "intl", filter: false },
+
+  // 해외 — 현지어 매체 (해당 국가 자체 언론)
+  { source: "Artribune", url: "https://www.artribune.com/feed/", scope: "intl", filter: false },
 ];
 
 /** 이 중 하나라도 있으면 미술 기사로 본다. */

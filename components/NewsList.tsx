@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Scope } from "@/lib/data";
 import type { Article } from "@/lib/rss";
+import { COUNTRY_LABELS } from "@/lib/geo";
 
 function ago(iso: string | null): string {
   if (!iso) return "";
@@ -28,10 +29,12 @@ type State =
 
 export default function NewsList({ scope }: { scope: Scope }) {
   const [state, setState] = useState<State>({ kind: "loading" });
+  const [country, setCountry] = useState("전체");
 
   useEffect(() => {
     let alive = true;
     setState({ kind: "loading" });
+    setCountry("전체");
 
     fetch(`/api/news?scope=${scope}`)
       .then((r) => r.json())
@@ -73,9 +76,45 @@ export default function NewsList({ scope }: { scope: Scope }) {
     );
   }
 
+  // 국내 스코프는 국가 구분이 필요 없다. 해외만 기사에 실제로 태깅된
+  // country 코드를 모아 필터 칩을 만든다 — 없는 나라는 칩 자체가 안 생긴다.
+  const codesPresent =
+    scope === "intl"
+      ? Array.from(new Set(state.articles.map((a) => a.country).filter(Boolean))) as string[]
+      : [];
+
+  const filtered =
+    country === "전체"
+      ? state.articles
+      : state.articles.filter((a) => a.country === country);
+
   return (
     <div aria-live="polite">
-      {state.articles.slice(0, 6).map((a) => (
+      {codesPresent.length > 1 && (
+        <div className="newsCountryRow" role="group" aria-label="국가 필터">
+          <button
+            type="button"
+            className="newsCountryChip"
+            aria-pressed={country === "전체"}
+            onClick={() => setCountry("전체")}
+          >
+            전체
+          </button>
+          {codesPresent.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className="newsCountryChip"
+              aria-pressed={country === c}
+              onClick={() => setCountry(c)}
+            >
+              {COUNTRY_LABELS[c] ?? c}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {filtered.slice(0, 6).map((a) => (
         <a
           key={a.url}
           className="newsItem"
@@ -88,9 +127,15 @@ export default function NewsList({ scope }: { scope: Scope }) {
           <span className="newsMeta">
             {a.source}
             {a.published && ` · ${ago(a.published)}`}
+            {a.country && COUNTRY_LABELS[a.country] && a.country !== "XX"
+              ? ` · ${COUNTRY_LABELS[a.country]}`
+              : ""}
           </span>
         </a>
       ))}
+      {filtered.length === 0 && (
+        <p className="newsEmpty">이 나라의 기사가 지금은 없습니다.</p>
+      )}
     </div>
   );
 }

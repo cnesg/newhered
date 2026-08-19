@@ -8,6 +8,8 @@ export type Article = {
   summary: string;
   published: string | null;
   scope: Scope;
+  /** ISO 국가코드. 해외(intl) 기사만 채워진다. 판단 불가하면 "XX". */
+  country: string | null;
 };
 
 const ENTITIES: Record<string, string> = {
@@ -92,6 +94,7 @@ async function readFeed(feed: Feed, signal: AbortSignal): Promise<Article[]> {
       published:
         parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString() : null,
       scope: feed.scope,
+      country: null,
     });
   }
   return out;
@@ -148,7 +151,27 @@ export async function collectNews(scope: Scope, limit = 14): Promise<Article[]> 
       return b.published.localeCompare(a.published);
     });
 
-    return diversify(merged, limit, 3);
+    const final = diversify(merged, limit, 3);
+
+    // 해외 기사만 국가 태깅한다. 실패해도 뉴스 자체는 그대로 반환한다.
+    if (scope === "intl" && final.length > 0) {
+      try {
+        const { classifyArticleCountries } = await import("./geo");
+        const codes = await classifyArticleCountries(
+          final.map((a) => ({
+            id: a.url,
+            text: a.summary ? `${a.title} — ${a.summary}` : a.title,
+          }))
+        );
+        for (const a of final) {
+          a.country = codes[a.url] ?? null;
+        }
+      } catch {
+        // 국가 태깅 실패는 무시 — 뉴스는 그대로 나간다.
+      }
+    }
+
+    return final;
   } finally {
     clearTimeout(timer);
   }

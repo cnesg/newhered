@@ -24,10 +24,15 @@ function clock(seconds: number | null): string {
 
 export default function VideoGrid({ scope }: { scope: Scope }) {
   const [state, setState] = useState<State>({ kind: "loading" });
+  const [query, setQuery] = useState("");
+  const [channel, setChannel] = useState("전체");
+  const [sort, setSort] = useState<"latest" | "channel">("latest");
 
   useEffect(() => {
     let alive = true;
     setState({ kind: "loading" });
+    setQuery("");
+    setChannel("전체");
 
     fetch(`/api/videos?scope=${scope}`)
       .then((r) => r.json())
@@ -77,11 +82,64 @@ export default function VideoGrid({ scope }: { scope: Scope }) {
     return <p className="newsEmpty">지금은 영상을 불러올 수 없습니다.</p>;
   }
 
+  const allChannels = Array.from(
+    new Set([...state.videos, ...state.shorts].map((v) => v.channel))
+  ).sort();
+
+  const q = query.trim().toLowerCase();
+  const matches = (v: Video) =>
+    (channel === "전체" || v.channel === channel) &&
+    (q === "" || v.title.toLowerCase().includes(q) || v.channel.toLowerCase().includes(q));
+
+  const sortFn = (a: Video, b: Video) =>
+    sort === "channel"
+      ? a.channel.localeCompare(b.channel)
+      : (b.published ?? "").localeCompare(a.published ?? "");
+
+  const videos = state.videos.filter(matches).sort(sortFn);
+  const shorts = state.shorts.filter(matches).sort(sortFn);
+  const noMatches = videos.length === 0 && shorts.length === 0;
+
   return (
     <>
-      {state.videos.length > 0 && (
+      <div className="videoControls">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="제목·채널 검색"
+          className="videoSearch"
+          aria-label="영상 검색"
+        />
+        <select
+          value={channel}
+          onChange={(e) => setChannel(e.target.value)}
+          className="videoSelect"
+          aria-label="채널 필터"
+        >
+          <option value="전체">전체 채널</option>
+          {allChannels.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as "latest" | "channel")}
+          className="videoSelect"
+          aria-label="정렬"
+        >
+          <option value="latest">최신순</option>
+          <option value="channel">채널순</option>
+        </select>
+      </div>
+
+      {noMatches && <p className="newsEmpty">일치하는 영상이 없습니다.</p>}
+
+      {videos.length > 0 && (
         <div className="videoGrid">
-          {state.videos.map((v) => (
+          {videos.map((v) => (
             <a
               key={v.id}
               href={v.url}
@@ -109,14 +167,14 @@ export default function VideoGrid({ scope }: { scope: Scope }) {
         </div>
       )}
 
-      {state.shorts.length > 0 && (
+      {shorts.length > 0 && (
         <div className="shortsBlock">
           <div className="shortsHead">
             <span className="shortsLabel">숏츠</span>
             <span className="shortsNote">현장 스케치와 짧은 리뷰</span>
           </div>
           <ul className="shortsRail">
-            {state.shorts.map((v) => (
+            {shorts.map((v) => (
               <li key={v.id}>
                 <a
                   href={`https://www.youtube.com/shorts/${v.id}`}

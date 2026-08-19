@@ -102,10 +102,10 @@ export async function computeTiers(): Promise<{
 
   const { data: artists } = await db
     .from("artists")
-    .select("id,name_ko,name_en,nationality")
+    .select("id,name_ko,name_en,nationality,tier,tier_locked")
     .in("id", activeIds);
 
-  const nameOf = new Map((artists ?? []).map((a) => [a.id, a]));
+  const infoOf = new Map((artists ?? []).map((a) => [a.id, a]));
 
   // 시각화용 0~100 스케일. 원값이 작아(대부분 한 자리 수) 배율을 적용한다.
   // 초기 추정값이며, 실제 분포를 보고 조정이 필요하다.
@@ -113,7 +113,7 @@ export async function computeTiers(): Promise<{
 
   const toArtist = (id: string, tier: TierKey): Artist => {
     const b = byArtist.get(id)!;
-    const info = nameOf.get(id);
+    const info = infoOf.get(id);
     const scores: Record<AxisKey, number> = {
       market: 0,
       institution: 0,
@@ -135,7 +135,13 @@ export async function computeTiers(): Promise<{
 
   for (const id of activeIds) {
     const b = byArtist.get(id)!;
-    if (b.firstSeen >= rookieCutoff) {
+    const info = infoOf.get(id);
+
+    // 이미 명성이 확립된 것으로 표시된 작가는 관측 기간과 무관하게 ESTABLISHED.
+    // "우리 시스템이 오늘 처음 봤다"는 사실이 실제 인지도를 뒤집지 않는다.
+    if (info?.tier_locked && info.tier === "established") {
+      established.push(toArtist(id, "established"));
+    } else if (b.firstSeen >= rookieCutoff) {
       rookie.push(toArtist(id, "rookie"));
     } else if (b.weeks.size >= CONSISTENCY_WEEKS_REQUIRED) {
       established.push(toArtist(id, "established"));
