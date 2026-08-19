@@ -1,3 +1,7 @@
+// artrend/app/api/news/route.ts
+
+export const dynamic = 'force-dynamic'; // 💡 이 줄을 무조건 추가하세요!
+
 import { NextResponse } from "next/server";
 import { collectNews } from "@/lib/rss";
 import type { Scope } from "@/lib/data";
