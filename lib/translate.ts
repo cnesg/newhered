@@ -63,7 +63,10 @@ ${lines}`;
         }),
         // Vercel 타임아웃에 맞춰 안전하게 9초로 설정
         signal: AbortSignal.timeout(9000), 
-        next: { revalidate: 86400, tags: ["news"] },
+        cache: "no-store",
+        
+        //있다고쳐
+        //next: { revalidate: 86400, tags: ["news"] },
       }
     );
 
