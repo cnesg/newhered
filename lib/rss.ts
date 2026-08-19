@@ -145,6 +145,39 @@ export async function collectNews(scope: Scope, limit = 14): Promise<Article[]> 
       }
     }
 
+    // RSS가 없는 나라(일본·프랑스)는 Google 뉴스 검색 RSS로 우회해 원문을
+    // 가져오고, 한국어로 번역해 합친다. 실패해도 나머지 뉴스는 그대로 나간다.
+    if (scope === "intl") {
+      try {
+        const { collectForeignLanguageNews } = await import("./googlenews");
+        const { translateToKorean } = await import("./translate");
+
+        const foreign = await collectForeignLanguageNews();
+        if (foreign.length > 0) {
+          const translations = await translateToKorean(
+            foreign.map((f) => ({ id: f.url, text: f.title }))
+          );
+          for (const f of foreign) {
+            const key = f.title.toLowerCase().replace(/\s+/g, "");
+            if (seen.has(key)) continue;
+            seen.add(key);
+            const ko = translations[f.url];
+            merged.push({
+              title: ko ?? f.title, // 번역 실패 시 원문 그대로 노출(빈 화면보다 낫다)
+              summary: ko ? f.title : "", // 번역됐으면 원문을 보조 텍스트로
+              url: f.url,
+              source: f.source,
+              published: f.published,
+              scope: "intl",
+              country: f.countryCode,
+            });
+          }
+        }
+      } catch {
+        // 외신 우회 실패는 무시 — 기존 RSS 뉴스는 그대로 나간다.
+      }
+    }
+
     merged.sort((a, b) => {
       if (!a.published) return 1;
       if (!b.published) return -1;
@@ -153,17 +186,19 @@ export async function collectNews(scope: Scope, limit = 14): Promise<Article[]> 
 
     const final = diversify(merged, limit, 3);
 
-    // 해외 기사만 국가 태깅한다. 실패해도 뉴스 자체는 그대로 반환한다.
-    if (scope === "intl" && final.length > 0) {
+    // 국가가 아직 안 정해진 기사만 태깅한다(일본·프랑스는 이미 정해져 있다).
+    // 실패해도 뉴스 자체는 그대로 반환한다.
+    const needsCountry = final.filter((a) => scope === "intl" && !a.country);
+    if (needsCountry.length > 0) {
       try {
         const { classifyArticleCountries } = await import("./geo");
         const codes = await classifyArticleCountries(
-          final.map((a) => ({
+          needsCountry.map((a) => ({
             id: a.url,
             text: a.summary ? `${a.title} — ${a.summary}` : a.title,
           }))
         );
-        for (const a of final) {
+        for (const a of needsCountry) {
           a.country = codes[a.url] ?? null;
         }
       } catch {

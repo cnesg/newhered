@@ -43,9 +43,8 @@ http://localhost:3000
 `filter: true`는 종합 문화면 피드에 쓴다. `ART_TERMS`에 걸리는 기사만 통과시키고
 `BLOCK_TERMS`에 걸리면 버린다. 미술 전문 매체는 `filter: false`로 둔다.
 
-현재 국내 5곳, 해외 16곳이 연결되어 있다. 대부분 영어권 매체이며, 현지어 매체는
-Artribune(이탈리아어) 하나뿐이다 — 프랑스·독일·일본·중국 주요 매체는 RSS를 막아두거나
-제공하지 않아 연결하지 못했다. 미술 전문 매체는 `filter: false`로 전부 통과시키고,
+현재 국내 5곳, 해외 16곳(RSS 기반)이 연결되어 있다. 여기에 더해 일본·프랑스는
+RSS 없이 Google 뉴스 우회 + Gemini 번역으로 별도 수집된다(아래 섹션 참고). 미술 전문 매체는 `filter: false`로 전부 통과시키고,
 종합 문화면은 `filter: true`로 미술 기사만 추출한다.
 
 한 매체가 목록을 독점하지 않도록 **매체당 3건 상한**을 둔다. 상한은 `lib/rss.ts`의
@@ -208,6 +207,42 @@ artist_daily_scores   매일 배치가 signals를 집계해 남기는 스냅샷.
   현재 파이프라인에서 쓰지 않는다. 나중에 필요해지면 다시 쓸 수 있어 지우지 않았다.
 - `lib/culture.ts`(공공API 수집 코드)도 마찬가지로 미사용 상태로 남겨둔다.
 
+## 일본·프랑스 — RSS 없이 원문 수집 + 번역
+
+일본·프랑스 주요 매체는 RSS를 거의 안 열어둔다. 대신 **Google 뉴스 언어별 검색
+RSS**로 우회한다(`lib/googlenews.ts`) — Google이 각 나라 언어로 뉴스를 모아
+RSS로 제공하는 서비스라, 원본 사이트가 RSS를 막아놔도 상관없다. 기사의
+`<source>` 태그에 실제 발행처 이름이 들어있어 출처 표시도 그대로 된다.
+
+가져온 원문(일본어/프랑스어) 제목은 **Gemini API**로 한국어 번역한다
+(`lib/translate.ts`). 번역된 한국어가 화면에 뜨는 제목이 되고, 원문은 요약 자리에
+보조 텍스트로 남는다.
+
+### 키 설정
+
+Gemini API 키를 Vercel에 아래 이름 중 하나로 저장하면 자동으로 인식된다.
+이미 다른 이름으로 저장했다면 그대로 써도 된다 — 코드가 셋 다 확인한다.
+
+```
+GEMINI_API_KEY
+GOOGLE_API_KEY
+GOOGLE_GENERATIVE_AI_KEY
+```
+
+키가 없거나 번역이 실패해도 기사 자체는 원문 그대로 노출된다 — 빈 화면보다
+원문이 낫다는 판단이다.
+
+### 나라·검색어 추가
+
+`lib/googlenews.ts`의 `GOOGLE_NEWS_QUERIES`에 한 줄 추가하면 된다.
+
+```ts
+{ label: "독일", query: "Kunstausstellung OR zeitgenössische Kunst", hl: "de", gl: "DE", countryCode: "DE" }
+```
+
+`hl`은 언어 코드, `gl`은 국가 코드다. 이 방식으로 원칙적으로 RSS가 없는 어떤
+나라든 추가할 수 있다.
+
 ## 해외 뉴스 국가 태깅
 
 국내 뉴스는 어차피 전부 국내라 나눌 필요가 없다. 해외(intl) 뉴스만 기사 내용을 보고
@@ -329,6 +364,9 @@ lib/
   culture.ts      (미사용) 문화포털 API 수집 코드
   extract.ts      Claude로 텍스트에서 작가 이름 추출
   mentions.ts     뉴스·영상 수집 → 추출 → signals 저장 파이프라인
+  geo.ts          해외 뉴스 국가 태깅 (Claude)
+  googlenews.ts   RSS 없는 나라 우회 수집 (Google 뉴스 언어별 검색)
+  translate.ts    외국어 제목 한국어 번역 (Gemini)
 app/api/news/
   route.ts        /api/news?scope=kr|intl
 app/api/videos/
