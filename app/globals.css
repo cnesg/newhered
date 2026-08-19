@@ -888,3 +888,31 @@ img.videoThumb {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- tier board empty states ---------- */
+
+.tierEmpty {
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-card);
+  background: var(--sunken);
+}
+
+.tierEmpty p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-60);
+  line-height: 1.6;
+}
+
+.tierColumnEmpty {
+  font-size: 12px;
+  color: var(--ink-40);
+  margin: 4px 0 0;
+}
+
+.axisPick:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

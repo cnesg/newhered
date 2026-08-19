@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { AXES, DATA, TIERS, AxisKey, Scope } from "@/lib/data";
-import { ArtistRow } from "@/components/Pieces";
+import { useEffect, useState } from "react";
+import { DATA, Scope } from "@/lib/data";
 import NewsList from "@/components/NewsList";
 import VideoGrid from "@/components/VideoGrid";
+import TierBoard from "@/components/TierBoard";
 import { editionLabel } from "@/lib/edition";
 
 const NAV = ["트렌드", "작가", "전시", "시장", "캘린더"];
@@ -12,7 +12,6 @@ const NAV = ["트렌드", "작가", "전시", "시장", "캘린더"];
 export default function Home() {
   const [scope, setScope] = useState<Scope>("kr");
   const [region, setRegion] = useState("전체");
-  const [sortBy, setSortBy] = useState<AxisKey | null>(null);
   const [tab, setTab] = useState("트렌드");
   const [edition, setEdition] = useState("");
 
@@ -21,16 +20,6 @@ export default function Home() {
   }, []);
 
   const d = DATA[scope];
-
-  const byTier = useMemo(() => {
-    const sorted = [...d.artists].sort((a, b) =>
-      sortBy ? b.scores[sortBy] - a.scores[sortBy] : 0
-    );
-    return TIERS.map((t) => ({
-      ...t,
-      artists: sorted.filter((a) => a.tier === t.key),
-    }));
-  }, [d, sortBy]);
 
   function switchScope(next: Scope) {
     setScope(next);
@@ -122,51 +111,11 @@ export default function Home() {
               작가 동향
             </h2>
             <span className="sectionNote">
-              {region === "전체" ? "전 지역" : region} · 세 구간 동등 노출
+              최근 7일 언급 기준 · 국내/해외 구분 전 통합 목록
             </span>
           </div>
 
-          <div className="axisLegend" role="group" aria-label="정렬 축">
-            <strong>4축</strong>
-            {AXES.map((a) => (
-              <button
-                key={a.key}
-                type="button"
-                className="axisPick"
-                aria-pressed={sortBy === a.key}
-                onClick={() => setSortBy(sortBy === a.key ? null : a.key)}
-              >
-                {a.label}
-              </button>
-            ))}
-            <span className="trailing">
-              {sortBy
-                ? `${AXES.find((a) => a.key === sortBy)?.label} 축 기준 정렬`
-                : "합산 점수 없음 · 축을 골라 정렬"}
-            </span>
-          </div>
-
-          <div className="tierGrid" style={{ marginTop: 16 }}>
-            {byTier.map((t) => (
-              <div
-                key={t.key}
-                className={t.key === "rising" ? "tier featured" : "tier"}
-              >
-                <div className="tierHead">
-                  <span className="tierName">{t.label}</span>
-                  {t.key === "rising" && (
-                    <span className="tierBadge">최근 24개월</span>
-                  )}
-                </div>
-                <p className="tierDesc">{t.desc}</p>
-                <div className="artistList">
-                  {t.artists.map((a) => (
-                    <ArtistRow key={a.id} artist={a} sortBy={sortBy} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <TierBoard />
         </section>
 
         <section className="section" aria-labelledby="abroad">

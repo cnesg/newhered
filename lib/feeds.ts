@@ -37,6 +37,12 @@ export const FEEDS: Feed[] = [
   { source: "Colossal", url: "https://www.thisiscolossal.com/feed/", scope: "intl", filter: false },
   { source: "Juxtapoz", url: "https://www.juxtapoz.com/news/?format=feed&type=rss", scope: "intl", filter: false },
   { source: "designboom", url: "https://www.designboom.com/art/feed/", scope: "intl", filter: false },
+
+  // 해외 — 권위지 (전문 평론·담론)
+  { source: "Frieze", url: "https://feeds.feedburner.com/frieze", scope: "intl", filter: false },
+  { source: "Elephant", url: "https://elephant.art/feed/", scope: "intl", filter: false },
+  { source: "ArtAsiaPacific", url: "https://artasiapacific.com/feed/", scope: "intl", filter: false },
+  { source: "Artsy", url: "https://www.artsy.net/rss/news", scope: "intl", filter: false },
 ];
 
 /** 이 중 하나라도 있으면 미술 기사로 본다. */
